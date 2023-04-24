@@ -143,21 +143,68 @@ void redirect_inNout(const char* text, char* filein, char* fileout){
     }
 }
 
+
+int Pipe(const char* process_l, const char* process_r){
+    int fd[2];
+    static char *argv[]={"echo","Foo is my name.",NULL};
+
+    if(pipe(fd) == -1){
+        return 1;
+    }
+
+    int pid1 = fork();
+    if(pid1 < 0){
+        return 2;
+    }
+
+    if(pid1 == 0){
+        dup2(fd[1], 1);
+        close(fd[0]);
+        close(fd[1]);
+        execv(process_l, argv);
+    }
+
+    int pid2 = fork();
+    if(pid2 < 0){
+        return 3;
+    }
+
+    if(pid2 == 0){
+        dup2(fd[0], 0);
+        close(fd[0]);
+        close(fd[1]);
+        execv(process_r, argv);
+    }
+
+    close(fd[0]);
+    close(fd[1]);
+
+    waitpid(pid1, NULL, 0);
+    waitpid(pid2, NULL, 0);
+    return 0;
+}
+
 void identificar_comandos(char** commands, int size){
     switch(size){
         case 0:
             if(strcmp(commands[0], "pwd\n") == 0){
                 print_dir();
+                break;
             }
             if(strcmp(commands[0], "ls\n") == 0){
                 print_files();
+                break;
             }
             if(commands[0][0] == '.' && commands[0][1] == '/'){
                 const char* n_text = remove_enter(commands[0]);
                 static char *argv[]={"echo","Foo is my name.",NULL};
                 executa_arquivo(n_text, argv);
+                break;
+            }else{
+                const char* n_text = remove_enter(commands[0]);
+                procura_arquivo(n_text);
+                break;
             }
-            break;
         case 2:
             if(strcmp(commands[1], "=>") == 0){
                 const char* n_text = remove_enter(commands[0]);
@@ -166,6 +213,11 @@ void identificar_comandos(char** commands, int size){
             if(strcmp(commands[1], "<=") == 0){
                 const char* n_text = remove_enter(commands[2]);
                 redirect_in(n_text, commands[0]);
+            }
+            if(commands[1][0] == '|'){
+                const char* n_text_l = remove_enter(commands[0]);
+                const char* n_text_r = remove_enter(commands[2]);
+                int n = Pipe(n_text_l, n_text_r);
             }
             break;
         case 4:
