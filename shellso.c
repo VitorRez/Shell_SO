@@ -7,46 +7,6 @@
 #include <sys/types.h> /* for pid_t */
 #include <sys/wait.h> /* for wait */
 
-void print_dir(){
-    char cwd[1024];
-    getcwd(cwd, sizeof(cwd));
-    printf("%s\n", cwd);
-}
-
-void print_files(){
-    DIR *dr;
-    struct dirent *en;
-    dr = opendir(".");
-    if (dr) {
-        while ((en = readdir(dr)) != NULL) {
-            printf("%s ", en->d_name);
-        }
-        printf("\n");
-        closedir(dr);
-    }
-}
-
-const char* remove_enter(char* nome){
-    int size = strlen(nome);
-    for(int i = 0; i < size; i++){
-        if(nome[i] == '\n'){
-            nome[i] = '\0';
-        }
-    }
-}
-
-const char* exe(char* text){
-    const char* copia = remove_enter(text);
-    int size = strlen(copia);
-    char *executavel = (char*)malloc((size+2)*sizeof(char));
-    executavel[0] = '.';
-    executavel[1] = '/';
-    for(int i = 2; i < size+2; i++){
-        executavel[i] = copia[i-2];
-    }
-    return executavel;
-}
-
 int procura_arquivo(const char* nome){
     FILE* file;
 
@@ -59,15 +19,12 @@ int procura_arquivo(const char* nome){
 }
 
 void executa_arquivo(char* diretorio, char** argv){
-    int x = procura_arquivo(diretorio);
-    if(x == 1){
-        pid_t pid = fork();
-        if(pid==0){
-            execv(diretorio, argv);
-            exit(127);
-        }else{
-            waitpid(pid,0,0);
-        }
+    pid_t pid = fork();
+    if(pid==0){
+        execvp(diretorio, argv);
+        exit(127);
+    }else{
+        waitpid(pid,0,0);
     }
 }
 
@@ -81,35 +38,74 @@ int get_num_lines(char* text){
     return cont;
 }
 
-char** processar_string(char* text){
-    //conta quantos tokens serão feitos
-    int cont = get_num_lines(text);
-    //cria um array de strings (array com os tokens)
+char** identifica_pipes(char* text){
+    char** mat = (char**)malloc(2*sizeof(char*));
+    for(int i = 0; i < cont; i++){
+        mat[i] = (char*)malloc(100*sizeof(char));
+    }
+    char* token = strtok(text, "|");
+    int cont = 0;
+    while(token != NULL){
+        mat[cont] = token;
+        token = strtok(NULL, "|");
+        cont++;
+    }
+    return mat;
+}
+
+char** identifica_redirect_in(char* text){
+    char** mat = (char**)malloc(2*sizeof(char*));
+    for(int i = 0; i < cont; i++){
+        mat[i] = (char*)malloc(100*sizeof(char));
+    }
+    char* token = strtok(text, "<=");
+    int cont = 0;
+    while(token != NULL){
+        mat[cont] = token;
+        token = strtok(NULL, "<=");
+        cont++;
+    }
+    return mat;
+}
+
+char** identifica_redirect_in(char* text){
+    char** mat = (char**)malloc(2*sizeof(char*));
+    for(int i = 0; i < cont; i++){
+        mat[i] = (char*)malloc(100*sizeof(char));
+    }
+    char* token = strtok(text, "<=");
+    int cont = 0;
+    while(token != NULL){
+        mat[cont] = token;
+        token = strtok(NULL, "<=");
+        cont++;
+    }
+    return mat;
+}
+
+char** processar_string(char* text, char* separador, int cont){
     char** mat = (char**)malloc(cont*sizeof(char*));
     for(int i = 0; i < cont; i++){
         mat[i] = (char*)malloc(100*sizeof(char));
     }
     //separa os tokens
-    char* token = strtok(text, " ");
+    char* token = strtok(text, separator);
     cont = 0;
     while(token != NULL){
         mat[cont] = token;
-        token = strtok(NULL, " ");
+        token = strtok(NULL, separator);
         cont++;
     }
     return mat;
 }
 
 void comando(char* command, char** argv){
-    if(strcmp(command, "pwd") == 0){
-        print_dir();
-        return;
-    }
-    if(strcmp(command, "ls") == 0){
-        print_files();
-        return;
-    }
     executa_arquivo(command, argv);
+    return;
+}
+
+void comando_pipe(char* command, char** argv){
+    execvp(command, argv);
     return;
 }
 
@@ -139,34 +135,16 @@ int return_in(int saved_stdin){
     close(saved_stdin);
 }
 
-/*void redirect_inNout(const char* text, char* filein, char* fileout){
-    int x = procura_arquivo(text);
-    if(x == 1){
-        static char *argv[]={"echo","Foo is my name.",NULL};
-        int saved_stdin = dup(STDIN_FILENO);
-        int saved_stdout = dup(1);
-        int in = open(filein, O_RDONLY);
-        int out = open(fileout, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR);
-        dup2(in, STDIN_FILENO);
-        dup2(out, 1);
-        executa_arquivo(text, argv);
-        dup2(saved_stdin, STDIN_FILENO);
-        dup2(saved_stdout, 1);
-        close(saved_stdin);
-        close(saved_stdout);
-    }
-}*/
-
 void redirect_inNout(char* text, char* filein, char* fileout, char** argv){
     int saved_stdin = redirect_in(filein);
     int saved_stdout = redirect_out(fileout);
-    comando(text, argv);
+    executa_arquivo(text, argv);
     return_in(saved_stdin);
     return_out(saved_stdout);
 }
 
 
-/*int Pipe(const char* process_l, const char* process_r, static char* argv){
+int Pipe(char* process_l, char* process_r, char** argv){
     int fd[2];
 
     if(pipe(fd) == -1){
@@ -182,7 +160,7 @@ void redirect_inNout(char* text, char* filein, char* fileout, char** argv){
         dup2(fd[1], 1);
         close(fd[0]);
         close(fd[1]);
-        execv(process_l, argv);
+        execvp(command, argv);
     }
 
     int pid2 = fork();
@@ -194,34 +172,40 @@ void redirect_inNout(char* text, char* filein, char* fileout, char** argv){
         dup2(fd[0], 0);
         close(fd[0]);
         close(fd[1]);
-        execv(process_r, argv);
+        execvp(command, argv);
     }
 
     close(fd[0]);
     close(fd[1]);
 
-    waitpid(pid1, NULL, 0);
-    waitpid(pid2, NULL, 0);
+    wait(NULL);
+    wait(NULL);
+    /*waitpid(pid1, NULL, 0);
+    waitpid(pid2, NULL, 0);*/
     return 0;
-}*/
+}
 
 void identificar_comandos(char** commands, int size){
-    static char *argv[]={"echo","Foo is my name.",NULL}; 
+    static char *argv[]={NULL}; 
     switch(size){
         case 0:
-            comando(commands[0], argv);
+            executa_arquivo(commands[0], argv);
             break;
         case 2:
             if(strcmp(commands[1], "=>") == 0){
                 int saved_stdout = redirect_out(commands[2]);
-                comando(commands[0], argv);
+                executa_arquivo(commands[0], argv);
                 return_out(saved_stdout);
                 break;
             }
             if(strcmp(commands[1], "<=") == 0){
                 int saved_stdin = redirect_in(commands[0]);
-                comando(commands[2], argv);
+                executa_arquivo(commands[2], argv);
                 return_in(saved_stdin);
+                break;
+            }
+            if(commands[1][0] == '|'){
+                int x = Pipe(commands[0], commands[2], argv);
                 break;
             }
         case 4:
@@ -233,60 +217,6 @@ void identificar_comandos(char** commands, int size){
             printf("Arquivo nao encontrado\n");
     }
 }
-
-/*void identificar_comandos(char** commands, int size){
-    switch(size){
-        case 0:
-            if(strcmp(commands[0], "pwd\n") == 0){
-                print_dir();
-                break;
-            }
-            if(strcmp(commands[0], "ls\n") == 0){
-                print_files();
-                break;
-            }
-            if(commands[0][0] == '.' && commands[0][1] == '/'){
-                const char* n_text = remove_enter(commands[0]);
-                static char *argv[]={"echo","Foo is my name.",NULL};
-                executa_arquivo(n_text, argv);
-                break;
-            }else{
-                const char* n_text = remove_enter(commands[0]);
-                procura_arquivo(n_text);
-                break;
-            }
-        case 2:
-            if(strcmp(commands[1], "=>") == 0){
-                const char* n_text = remove_enter(commands[2]);
-                static char* argv[]={"echo","Foo is my name.",NULL};
-                int saved_stdout = redirect_out(n_text);
-                executa_arquivo(commands[0], argv);
-                return_out(saved_stdout);
-            }
-            if(strcmp(commands[1], "<=") == 0){
-                const char* n_text = remove_enter(commands[2]);
-                static char* argv[]={"echo","Foo is my name.",NULL};
-                int saved_stdin = redirect_in(commands[0]);
-                executa_arquivo(n_text, argv);
-                return_in(saved_stdin);
-            }
-            if(commands[1][0] == '|'){
-                const char* n_text_l = remove_enter(commands[0]);
-                const char* n_text_r = remove_enter(commands[2]);
-                int n = Pipe(n_text_l, n_text_r);
-            }
-            break;
-        case 4:
-            if(strcmp(commands[1], "<=") == 0 && strcmp(commands[3], "=>") == 0){
-                const char* n_text = remove_enter(commands[2]);
-                redirect_inNout(n_text, commands[0], commands[4]);
-                return;
-            }
-            break;
-        default:
-            printf("comando não encontrado\n");
-    }
-}*/
 
 int main(int argc, char **argv){
     char* prompt = "(Diga la) $";
@@ -302,7 +232,7 @@ int main(int argc, char **argv){
         printf("%s ", prompt);
         fgets(text, 100, stdin);
         if(strcmp(text, "fim\n") == 0) break;
-        remove_enter(text);
+        text[strcspn(text, "\n")] = 0;
         size = get_num_lines(text);
         str_a = processar_string(text);
         identificar_comandos(str_a, size-1);
