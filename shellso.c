@@ -190,7 +190,7 @@ void identificar_comandos(char* commands){
     printf("\n");
     for(int i = p_red_s+3; i < size; i++) printf("%c", commands[i]);
     printf("\n");
-    printf("hmmmmmmmm banana\n");
+    printf("hmmmmmmmmm banana\n");
 }
 
 /*void identificar_comandos(char* commands){
