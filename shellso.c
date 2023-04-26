@@ -38,65 +38,31 @@ int get_num_lines(char* text){
     return cont;
 }
 
-char** identifica_pipes(char* text){
-    char** mat = (char**)malloc(2*sizeof(char*));
-    for(int i = 0; i < cont; i++){
-        mat[i] = (char*)malloc(100*sizeof(char));
-    }
-    char* token = strtok(text, "|");
-    int cont = 0;
-    while(token != NULL){
-        mat[cont] = token;
-        token = strtok(NULL, "|");
-        cont++;
-    }
-    return mat;
-}
-
-char** identifica_redirect_in(char* text){
-    char** mat = (char**)malloc(2*sizeof(char*));
-    for(int i = 0; i < cont; i++){
-        mat[i] = (char*)malloc(100*sizeof(char));
-    }
-    char* token = strtok(text, "<=");
-    int cont = 0;
-    while(token != NULL){
-        mat[cont] = token;
-        token = strtok(NULL, "<=");
-        cont++;
-    }
-    return mat;
-}
-
-char** identifica_redirect_in(char* text){
-    char** mat = (char**)malloc(2*sizeof(char*));
-    for(int i = 0; i < cont; i++){
-        mat[i] = (char*)malloc(100*sizeof(char));
-    }
-    char* token = strtok(text, "<=");
-    int cont = 0;
-    while(token != NULL){
-        mat[cont] = token;
-        token = strtok(NULL, "<=");
-        cont++;
-    }
-    return mat;
-}
-
 char** processar_string(char* text, char* separador, int cont){
     char** mat = (char**)malloc(cont*sizeof(char*));
     for(int i = 0; i < cont; i++){
         mat[i] = (char*)malloc(100*sizeof(char));
     }
     //separa os tokens
-    char* token = strtok(text, separator);
+    char* token = strtok(text, separador);
     cont = 0;
     while(token != NULL){
         mat[cont] = token;
-        token = strtok(NULL, separator);
+        token = strtok(NULL, separador);
         cont++;
     }
     return mat;
+}
+
+char** cria_argv(char** C, int size){
+    char** argv = (char**)malloc(cont*sizeof(char*));
+    for(int i = 0; i < size; i++){
+        argv[i] = (char*)malloc(100*sizeof(char));
+    }
+    for(int i = 0; i < size-1; i++){
+        argv[i] = C[i+1];
+    }
+    return argv;
 }
 
 void comando(char* command, char** argv){
@@ -143,8 +109,7 @@ void redirect_inNout(char* text, char* filein, char* fileout, char** argv){
     return_out(saved_stdout);
 }
 
-
-int Pipe(char* process_l, char* process_r, char** argv){
+int Pipe(char* process_l, char* process_r, char** argv_l, char ** argv_r){
     int fd[2];
 
     if(pipe(fd) == -1){
@@ -160,7 +125,7 @@ int Pipe(char* process_l, char* process_r, char** argv){
         dup2(fd[1], 1);
         close(fd[0]);
         close(fd[1]);
-        execvp(command, argv);
+        execvp(process_l, argv_l);
     }
 
     int pid2 = fork();
@@ -172,7 +137,7 @@ int Pipe(char* process_l, char* process_r, char** argv){
         dup2(fd[0], 0);
         close(fd[0]);
         close(fd[1]);
-        execvp(command, argv);
+        execvp(process_r, argv_r);
     }
 
     close(fd[0]);
@@ -180,41 +145,83 @@ int Pipe(char* process_l, char* process_r, char** argv){
 
     wait(NULL);
     wait(NULL);
-    /*waitpid(pid1, NULL, 0);
-    waitpid(pid2, NULL, 0);*/
     return 0;
 }
 
-void identificar_comandos(char** commands, int size){
-    static char *argv[]={NULL}; 
-    switch(size){
-        case 0:
-            executa_arquivo(commands[0], argv);
-            break;
-        case 2:
-            if(strcmp(commands[1], "=>") == 0){
-                int saved_stdout = redirect_out(commands[2]);
-                executa_arquivo(commands[0], argv);
-                return_out(saved_stdout);
-                break;
+int verifica_pipe(char* text){
+    int size = strlen(text);
+    for(int i = 0; i < size; i++){
+        if(text[i] == '|') return 1;
+    }
+    return 0;
+}
+
+int verifica_entrada_arquivo(char* text){
+    int size = strlen(text);
+    for(int i = 0; i < size-1; i++){
+        if(text[i] == '<' && text[i+1] == '=') return 1;
+    }
+    return 0;
+}
+
+int verifica_saida_arquivo(char* text){
+    int size = strlen(text);
+    for(int i = 0; i < size-1; i++){
+        if(text[i] == '=' && text[i+1] == '>') return 1;
+    }
+    return 0;
+}
+
+void identificar_comandos(char* commands){
+    int p = verifica_pipe(commands);
+    int e = verifica_entrada_arquivo(commands);
+    int s = verifica_saida_arquivo(commands);
+    if(p == 1){
+        char** P = processar_string(commands, "|", 2);
+        if(e == 1){
+            char** E = processar_string(P[0], "<=", 2);
+            size1 = get_num_lines(E[0]);
+            size2 = get_num_lines(E[1]);
+            char** C1 = processar_string(E[0], " ", size1);
+            char** C2 = processar_string(E[1], " ", size2);
+            if(size1 > 0){
+                char** C1 = processar_string(E[0], " ", size1);
+                char** argv1 = cria_argv(C1, size1);
+            }else{
+                char** argv1 = {NULL};
             }
-            if(strcmp(commands[1], "<=") == 0){
-                int saved_stdin = redirect_in(commands[0]);
-                executa_arquivo(commands[2], argv);
-                return_in(saved_stdin);
-                break;
+            if(size2 > 0){
+                char** C2 = processar_string(E[1], " ", size2);
+                char** argv2 = cria_argv(C2, size2);
+            }else{
+                char** argv2 = {NULL};
             }
-            if(commands[1][0] == '|'){
-                int x = Pipe(commands[0], commands[2], argv);
-                break;
-            }
-        case 4:
-            if(strcmp(commands[1], "<=") == 0 && strcmp(commands[3], "=>") == 0){
-                redirect_inNout(commands[2], commands[0], commands[4], argv);
-                break;
-            }
-        Default:
-            printf("Arquivo nao encontrado\n");
+            int saved_stdin = redirect_in(C1[0]);
+            
+        }
+        if(e == 0){
+
+        }
+        if(s == 1){
+            char** S = processar_string(P[1], "=>", 2);
+        }
+        if(s == 0){
+
+        }
+    }
+    if(p == 0){
+        if(e == 1){
+
+        }
+        if(e == 0){
+
+        }
+        if(s == 1){
+
+        }
+        if(s == 0){
+            
+        }
     }
 }
 
@@ -233,9 +240,8 @@ int main(int argc, char **argv){
         fgets(text, 100, stdin);
         if(strcmp(text, "fim\n") == 0) break;
         text[strcspn(text, "\n")] = 0;
-        size = get_num_lines(text);
-        str_a = processar_string(text);
-        identificar_comandos(str_a, size-1);
+        //str_a = processar_string(text);
+        identificar_comandos(text);
     }while(strcmp(text, "fim\n") != 0);
     return 0;
 }
