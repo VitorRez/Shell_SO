@@ -191,10 +191,13 @@ void identificar_comandos(char* commands){
 
     int size = get_num_lines(commands);
     char** divide_comando = processar_string(commands, " ", size);
+    int p_red_e = 0;
+    int p_red_s = 0;
+    int p_pip = 0;
     for(int i = 0; i < size; i++){
-        printf("%s\n", divide_comando[i]);
+        //printf("%s\n", divide_comando[i]);
         if(strcmp(divide_comando[i], "|") == 0){
-            printf("AChoo\n");
+            
         }
     }
 }
