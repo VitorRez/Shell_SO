@@ -173,7 +173,7 @@ int verifica_saida_arquivo(char* text){
 }
 
 void identificar_comandos(char* commands){
-    int size = strlen(commands);
+    /*int size = strlen(commands);
     int p_red_e = 0;
     int p_red_s = 0;
     int p_pip = 0;
@@ -181,16 +181,22 @@ void identificar_comandos(char* commands){
         if(commands[i] == '<' && commands[i+1] == '=') p_red_e = i;
         if(commands[i] == '|') p_pip = i;
         if(commands[i] == '=' && commands[i+1] == '>') p_red_s = i;
+    }*/
+
+    /*char** divide_pipe = processar_string(commands, " | ", 2);
+    char** divide_entrada = processar_string(divide_pipe[0], " <= ", 2);
+    char** divide_saida = processar_string(divide_pipe[1], " => ", 2);
+    printf("%s, %s\n", divide_entrada[0], divide_entrada[1]);
+    printf("%s, %s\n", divide_saida[0], divide_saida[1]);*/
+
+    int size = get_num_lines(commands);
+    char** divide_comando = processar_string(commands, " ", size);
+    for(int i = 0; i < size; i++){
+        printf("%s\n", divide_comando[i]);
+        if(strcmp(divide_comando[i], "|") == 0){
+            printf("AChoo\n");
+        }
     }
-    for(int i = 0; i < p_red_e; i++) printf("%c", commands[i]);
-    printf("\n");
-    for(int i = p_red_e+3; i < p_pip; i++) printf("%c", commands[i]);
-    printf("\n");
-    for(int i = p_pip+2; i < p_red_s; i++) printf("%c", commands[i]);
-    printf("\n");
-    for(int i = p_red_s+3; i < size; i++) printf("%c", commands[i]);
-    printf("\n");
-    printf("hmmmmmmmmm banana\n");
 }
 
 /*void identificar_comandos(char* commands){
