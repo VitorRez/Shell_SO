@@ -6,9 +6,73 @@
 #include <fcntl.h>
 #include <sys/types.h> /* for pid_t */
 #include <sys/wait.h> /* for wait */
-#include "argv.h"
-#include "auxiliar.h"
 
+//Funções de apoio, seja para interpretação de comandos 
+//e processamento de strings
+
+char** processar_string(char* text, char* separador, int cont){
+    char** mat = (char**)malloc(cont*sizeof(char*));
+    for(int i = 0; i < cont; i++){
+        mat[i] = (char*)malloc(100*sizeof(char));
+    }
+    char* token = strtok(text, separador);
+    cont = 0;
+    while(token != NULL){
+        mat[cont] = token;
+        token = strtok(NULL, separador);
+        cont++;
+    }
+    return mat;
+}
+
+int get_num_lines(char* text){
+    int cont = 1;
+    for(int i = 0; i < strlen(text); i++){
+        if(text[i] == ' '){
+            cont++;
+        }
+    }
+    return cont;
+} 
+
+int procura_arquivo(char* nome){
+    FILE* file;
+
+    if ((file = fopen(nome, "r"))){
+        fclose(file);
+        return 1;
+    }
+    printf("%s: comando não encontrado\n", nome);
+    return 0;
+}
+
+char** cria_argv(int size){
+    char** argv = (char**)malloc((size+1)*sizeof(char*));
+    for(int i = 0; i < size+1; i++){
+        argv[i] = (char*)malloc(100*sizeof(char));
+    }
+    return argv;
+}
+
+void insere_argv(char** argv, int posicao, char* comando){
+    argv[posicao] = comando;
+}
+
+void preenche_argv(char** argv, char** comando, int size, int posicao){
+    for(int i = 0; i < size+1; i++){
+        insere_argv(argv, i , comando[i+posicao]);
+    }
+    argv[size] = NULL;
+}
+
+void delete_argv(char** argv, int size){
+    for(int i = 0; i < size+1; i++){
+        free(argv[i]);
+    }
+    free(argv);
+}
+
+//Funções essenciais para o funcionamento do shell
 void executa_arquivo(char* comando, char** argv){
     pid_t pid = fork();
     if(pid==0){
@@ -160,3 +224,29 @@ void caminhar_nos_comandos(char* command_line){
     }
     free(command_parsed);*/
 }
+
+//
+
+void main(int argc, char** argv){
+    char* prompt = "(Diga la) $";
+    char text[100];
+
+    (void)argc;
+    (void)argv;
+
+    do{
+        printf("%s ", prompt);
+        fgets(text, 100, stdin);
+        if(strcmp(text, "fim\n") == 0) break;
+        text[strcspn(text, "\n")] = 0;
+        caminhar_nos_comandos(text);
+    }while(strcmp(text, "fim\n") != 0);
+}
+
+/*void main(){
+    char filename[100];
+    fgets(filename, 100, stdin);
+    filename[strcspn(filename, "\n")] = 0;
+    int x = procura_arquivo(filename);
+    printf("%d\n", x);
+}*/

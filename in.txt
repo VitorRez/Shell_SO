@@ -1,1 +1,5 @@
-pwd\n
+banana
+maçã 
+beterraba
+jabuticaba
+jabulani
