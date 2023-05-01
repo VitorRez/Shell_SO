@@ -6,7 +6,7 @@ int redirect_out(char*);
 void return_out(int);
 int redirect_in(char*);
 void return_in(int);
-int Pipe(char*, char*, char**, char**, int, int, int);
+int Pipe(char*, char*, char**, char**, int, int);
 void caminhar_nos_comandos(char*);
 
 #endif

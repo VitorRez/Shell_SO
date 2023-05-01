@@ -9,8 +9,9 @@
 
 char** cria_argv(int size){
     char** argv = (char**)malloc((size+1)*sizeof(char*));
+    char linha[100];
     for(int i = 0; i < size+1; i++){
-        argv[i] = (char*)malloc(100*sizeof(char));
+        argv[i] = linha;
     }
     return argv;
 }
@@ -27,8 +28,9 @@ void preenche_argv(char** argv, char** comando, int size, int posicao){
 }
 
 void delete_argv(char** argv, int size){
-    for(int i = 0; i < size+1; i++){
-        free(argv[i]);
-    }
+    //for(int i = 0; i < size+1; i++){
+        //printf("%s\n", argv[i]);
+        //free(argv[i]);
+    //}
     free(argv);
 }

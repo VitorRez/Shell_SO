@@ -9,8 +9,9 @@
 
 char** processar_string(char* text, char* separador, int cont){
     char** mat = (char**)malloc(cont*sizeof(char*));
+    char str[100];
     for(int i = 0; i < cont; i++){
-        mat[i] = (char*)malloc(100*sizeof(char));
+        mat[i] = str;
     }
     char* token = strtok(text, separador);
     cont = 0;
