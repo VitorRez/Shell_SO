@@ -120,7 +120,6 @@ void caminhar_nos_comandos(char* command_line){
     int background = 0;
     if(strcmp(command_parsed[num_linhas-1], "&") == 0){
         background = 1;
-        printf("background\n");
     }
     for(int i = 0; i < num_linhas; i++){
         if(strcmp(command_parsed[i], "<=") == 0){
@@ -167,6 +166,6 @@ void caminhar_nos_comandos(char* command_line){
     if(s == 1){
         return_out(saved_stdout);
     }
-    printf("aqui\n");
+    //printf("aqui\n");
     free(command_parsed);
 }

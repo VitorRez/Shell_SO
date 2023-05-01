@@ -21,7 +21,7 @@ void insere_argv(char** argv, int posicao, char* comando){
 }
 
 void preenche_argv(char** argv, char** comando, int size, int posicao){
-    for(int i = 0; i < size+1; i++){
+    for(int i = 0; i < size; i++){
         insere_argv(argv, i , comando[i+posicao]);
     }
     argv[size] = NULL;
